@@ -23,7 +23,7 @@ CrEventor is a deeply customized fork of [leoetlino/event-editor](https://github
 - **Multi-flow tabbed workspace**: open multiple EventFlow files (`.bfevfl`) simultaneously, with close / rename / drag-to-reorder support.
 - **Lossless JSON round-trip serialization**: EventFlow can be converted to JSON and rebuilt back to binary (`.bfevfl`), ideal for version control and manual editing.
 - **Chinese localization (CNzh)**: built for Chinese story/dialogue authoring, with text extraction, editing, and independent overlay saving.
-  > Note: for copyright reasons, releases **do not bundle any in-game Chinese text**. Please provide your own text data extracted from the game (see Usage below).
+  > Note: for copyright reasons, releases **do not bundle any in-game text**. Please provide your own text data extracted from the game (see Usage below).
 - **Advanced text editing**: visual editing of MSBT `control` fields, covering `set_colour` / `font` / `text_size` / `sound` / `pause` / `choice` and over a dozen control types.
 
   ![Text editor](docs/text_editor.png)
@@ -53,7 +53,7 @@ CrEventor is a deeply customized fork of [leoetlino/event-editor](https://github
 
 Before using this tool, please read the [Zeldamods Wiki](https://zeldamods.org/) basics to make sure you understand the BOTW mod project structure, the purpose of each file, and the relevant conventions, and that you have some modding experience. Again: this tool was made for personal workflow and development simplicity, and **does not represent a standard mod creation workflow**.
 
-- **Copyright**: releases **do not bundle any in-game Chinese text** to avoid copyright issues.
+- **Copyright**: releases **do not bundle any in-game text** to avoid copyright issues.
 - **Not fully tested**: this tool has not been fully tested on large projects. Please back up manually and often. If you encounter any bug, please record and report it.
 - **Every save is a backup**: each save creates a backup and **never overwrites previous saves**. Locate backups by their save time; restore from the menu if needed. When creating a manual backup, you can **set a custom name** to record and track project progress.
 
@@ -112,7 +112,7 @@ CrEventor/
 │   ├── gamedata_editor.py      # Flag card editor
 │   ├── text_editor_dialog.py   # Advanced text editing (control fields)
 │   ├── i18n/                   # Internationalization (zh_CN / en_US)
-│   └── resources/texts/        # Text resources (no built-in Chinese text)
+│   └── resources/texts/        # Text resources (no built-in game text)
 ├── TextEditor/                 # ProseMirror-based message editor
 ├── event-editor-master/        # Upstream base framework (do not modify)
 └── docs/                       # Screenshots
