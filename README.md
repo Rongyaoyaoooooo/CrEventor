@@ -8,6 +8,8 @@
 
 **项目仓库**：https://github.com/Rongyaoyaoooooo/CrEventor
 
+简体中文 · [English](./README.en.md)
+
 CrEventor 是一款基于 [leoetlino/event-editor](https://github.com/leoetlino/event-editor) 深度二次开发的《旷野之息》事件流编辑器。它在保留原版流程图可视化编辑能力的基础上，重点强化了**中文本地化**、**gamedata 与 savedata 生成**、**eventinfo 注册**、**包含 control 字段的文本深度高级编辑**、**选项池（GeneralChoice）** 等能力，面向**系统化 Mod 制作**场景。
 
 ![主界面全景](docs/main.png)
@@ -94,8 +96,8 @@ CrEventor 是一款基于 [leoetlino/event-editor](https://github.com/leoetlino/
 
 ```
 CrEventor/
-├── launch.bat                  # Windows 启动器（推荐入口）
-├── launch.py                   # Qt DLL 修复 + import 路径配置 → main()
+├── launch.py                   # 入口（Qt DLL 修复 + import 路径配置 → main()）
+├── requirements.txt            # 运行时依赖
 ├── CrEventor/          # ★ 所有自定义代码
 │   ├── __main__.py             # 主窗口（枢纽）
 │   ├── option_pool_panel.py    # M 面板：选项池 + 对话选项配置
@@ -109,8 +111,9 @@ CrEventor/
 │   ├── text_editor_dialog.py   # 文本高级编辑（control 字段）集成
 │   ├── i18n/                   # 国际化（zh_CN / en_US）
 │   └── resources/texts/        # 文本资源（发布版不含内置中文文本）
+├── TextEditor/                 # 基于 ProseMirror 的消息编辑器
 ├── event-editor-master/        # 上游基础框架（勿直接修改）
-└── venv/                       # 虚拟环境（Python 3.11）
+└── docs/                       # 截图
 ```
 
 > 发布版不包含文本资源，请自行设法获取。
@@ -119,12 +122,20 @@ CrEventor/
 
 ## 快速开始（Windows）
 
-### 环境要求
+### 方式一：下载发布版（推荐）
+
+1. 前往 [Releases](https://github.com/Rongyaoyaoooooo/CrEventor/releases) 下载最新版 `CrEventor-*.zip`。
+2. 解压到任意目录（建议路径不含中文、空格）。
+3. 运行解压目录中的 `CrEventor.exe`。
+
+### 方式二：从源码运行
+
+#### 环境要求
 
 - Windows（建议项目路径不含中文、空格，以避免 Qt DLL 加载问题）
 - Python 3.11（64 位）
 
-### 安装
+#### 安装
 
 ```powershell
 # 1. 进入项目目录
@@ -135,23 +146,19 @@ python -m venv venv
 .\venv\Scripts\Activate.ps1
 
 # 3. 安装依赖
-pip install PyQt5==5.15.11 PyQtWebEngine==5.15.7
-pip install evfl==1.2.0 pyyaml msgpack
+pip install -r requirements.txt
 ```
 
 > 说明：`aamp` / `byml` / `rstb` / `oead` 为平台相关二进制包（部分为 `.whl` / `.pyd`），
 > 请根据现有 venv 或对应 wheel 文件安装。
 
-### 启动
+#### 启动
 
 ```powershell
-# 方式一：推荐
-.\launch.bat
-
-# 方式二：直接运行
+# 直接运行
 .\venv\Scripts\python.exe launch.py
 
-# 方式三：以模块方式运行
+# 以模块方式运行
 .\venv\Scripts\python.exe -m CrEventor
 ```
 
