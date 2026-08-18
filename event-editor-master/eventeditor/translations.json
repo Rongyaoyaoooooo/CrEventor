@@ -1,0 +1,78 @@
+{
+  "keys": {
+    "IsWaitFinish": "等待结束",
+    "IsIgnoreSame": "忽略相同",
+    "TargetIndex": "目标索引",
+    "SeqBank": "序列库",
+    "IsEnabledAnimeDriven": "启用动画驱动",
+    "MorphingFrame": "变形帧",
+    "IsOneTimeEndKeep": "单次结束保持",
+    "ASName": "动画名称",
+    "NoErrorCheck": "不检查错误",
+    "ClothWarpMode": "布料变形模式",
+    "MessageId": "消息ID",
+    "Frame": "帧数",
+    "CreateMode": "创建模式",
+    "IsGrounding": "接地",
+    "bWorld": "世界",
+    "PosX": "位置X",
+    "PosY": "位置Y",
+    "PosZ": "位置Z",
+    "RotX": "旋转X",
+    "RotY": "旋转Y",
+    "RotZ": "旋转Z"
+  },
+  "actions": {
+    "Demo_SoundTrigger": "触发声音",
+    "Demo_SoundTriggerFade": "声音触发淡出",
+    "Demo_PlayASAdapt": "播放动画适配",
+    "DemoWaitAttention": "等待注意",
+    "Demo_WaitFrame": "等待帧",
+    "Demo_FlagON": "开关开启",
+    "Demo_FlagOFF": "开关关闭",
+    "Demo_ChangeScene": "切换场景",
+    "Demo_CallDemo": "调用演示",
+    "Demo_RestoreTouchForQuest": "恢复任务触碰",
+    "Demo_InAtTouchForQuest": "任务触碰中",
+    "Demo_SwitchPlayerEquipment": "切换玩家装备",
+    "Demo_IncreasePunchItem": "增加拳击物品",
+    "Demo_CancelAllMatchCount": "取消全部匹配计数",
+    "Demo_SetCoords": "设置坐标",
+    "Demo_ForceSetPlayerSavePosAngle": "强制设置玩家保存位置角度"
+  },
+  "queries": {
+    "CheckPlayerState": "检查玩家状态",
+    "CheckFlag": "检查标志",
+    "CheckCurrentMap": "检查当前地图",
+    "GeneralChoice2": "通用选择2",
+    "CheckGameDataInt": "检查游戏数据整数"
+  },
+  "types": {
+    "int": "整数",
+    "bool": "布尔",
+    "float": "浮点数",
+    "string": "字符串",
+    "argument": "参数",
+    "actor id.": "角色ID",
+    "ints": "整数列表",
+    "bools": "布尔列表",
+    "floats": "浮点列表",
+    "strings": "字符串列表"
+  },
+  "actors": {
+    "EventSystemActor": "事件系统角色",
+    "GameROMPlayer": "游戏ROM玩家",
+    "NPC_GodVoice": "NPC神谕",
+    "SceneSoundCtrlTag": "场景音效控制标签",
+    "FldObj_DownloadTerminal_A_01": "下载终端",
+    "Fader": "淡入淡出",
+    "Priest_Boss_Giant": "祭司Boss巨人",
+    "GameRomCamera": "游戏ROM相机",
+    "EventCameraRumble": "事件相机震动",
+    "EventControllerRumble": "事件手柄震动",
+    "SoundTriggerTag": "声音触发标签"
+  },
+  "actor_subnames": {
+    "Boss": "Boss"
+  }
+}

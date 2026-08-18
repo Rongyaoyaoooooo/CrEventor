@@ -1,11 +1,45 @@
+# Python
 __pycache__/
-*.pyc
-*.egg-info/
-*.dist-info/
-.mypy_cache/
-dist/
-_test.py
-build/
+*.py[cod]
+*.pyo
+*.pyd
 
+# 虚拟环境
+venv/
+
+# 备份压缩包
+*.zip
+
+# 备份 / 临时文件
+*.bak
+*.bak2
+*.bak3
+*.bak4
+*.bak5
+
+# 个人资料与参考素材（可能含游戏数据，规避版权）
+参考素材/
+新建文件夹/
+新知识/
+不要翻阅！Test/
+
+# 运行时产物
+logs/
+Texts/
+
+# 日志与调试
+*.log
+debug*.txt
+
+# 根目录临时数据文件
+123.json
+texts.json
+原版.json
+文档.json
+
+# IDE / 编辑器
+.idea/
 .vscode/
-*.bfevfl
+*.iml
+.DS_Store
+Thumbs.db

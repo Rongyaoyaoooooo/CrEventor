@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  :root { background: #1e1e1e; color: #ddd; font-family: "Segoe UI", sans-serif; font-size: 14px; }
+  body { margin: 0; padding: 8px; }
+
+  /* ProseMirror 编辑器基础 */
+  .ProseMirror { outline: none; min-height: 120px; line-height: 1.8; white-space: pre-wrap; }
+  .ProseMirror p { margin: 2px 0; padding: 2px 8px; min-height: 22px; border-left: 2px solid #3a3a3a; }
+  .ProseMirror p.empty-node::before { content: "\200b"; }  /* zero-width space for empty paragraphs */
+
+  /* 内联控件 badge */
+  .inline-ctrl {
+    display: inline; padding: 1px 6px; margin: 0 2px;
+    border-radius: 3px; font-size: 11px; cursor: grab; user-select: none;
+    vertical-align: middle; white-space: nowrap;
+  }
+  .inline-ctrl.pause   { background: #3a4a3a; color: #8c8; border: 1px solid #5a7a5a; }
+  .inline-ctrl.sound   { background: #4a4a3a; color: #cc8; border: 1px solid #7a7a5a; }
+  .inline-ctrl.sound2  { background: #4a4a3a; color: #cc8; border: 1px solid #7a7a5a; }
+  .inline-ctrl.icon    { background: #3a4a5a; color: #8af; border: 1px solid #4a6a7a; }
+  .inline-ctrl.animation{ background: #4a3a4a; color: #c8c; border: 1px solid #6a5a6a; }
+  .inline-ctrl.auto_advance{ background: #3a3a4a; color: #aac; border: 1px solid #5a5a7a; }
+  .inline-ctrl.raw     { background: #4a3a3a; color: #c88; border: 1px solid #7a6a5a; }
+  .inline-ctrl.variable{ background: #4a3a4a; color: #c8c; border: 1px solid #6a5a6a; }
+  .inline-ctrl:hover   { filter: brightness(1.3); }
+
+  /* choice/single_choice 是消息的底层配置，不是可拖动的正文块。 */
+  .choice-block {
+    display: block; box-sizing: border-box;
+    min-height: 20px; padding: 2px 8px; margin: 8px 0 0;
+    background: #242424; border-top: 1px solid #303030;
+    border-radius: 2px; color: #666; font-size: 11px;
+    line-height: 16px; cursor: default; user-select: none;
+    pointer-events: none;
+  }
+
+  /* 选中状态 */
+  .ProseMirror-selectednode { outline: 2px solid #5a5; border-radius: 3px; }
+
+  /* 占位提示 */
+  #status { color: #888; font-size: 11px; padding: 2px 6px; margin-bottom: 4px; }
+
+  .font-hylian { font-weight: bold; font-style: italic; }
+
+  /* 右键样式菜单 */
+  #style-menu { position: fixed; background: #2a2a2a; border: 1px solid #555; border-radius: 6px; padding: 2px 0; z-index: 200; min-width: 100px; box-shadow: 2px 2px 10px rgba(0,0,0,0.6); display: none; }
+  .sm-item { position: relative; padding: 7px 12px; font-size: 12px; color: #ccc; cursor: pointer; white-space: nowrap; display: flex; justify-content: space-between; align-items: center; }
+  .sm-item:hover { background: #4a5a4a; color: #fff; }
+  .sm-item .sm-arrow { font-size: 9px; color: #888; margin-left: 24px; }
+  .sm-sub { position: fixed; display: none; background: #2a2a2a; border: 1px solid #555; border-radius: 4px; padding: 2px 0; z-index: 201; min-width: 110px; box-shadow: 2px 2px 8px rgba(0,0,0,0.5); }
+  .sm-sub .sm-item { padding: 5px 12px; font-size: 11px; }
+  .sm-sep { height: 1px; background: #444; margin: 2px 8px; }
+  .sm-swatch { display: inline-block; width: 36px; height: 13px; border-radius: 2px; margin-right: 6px; vertical-align: middle; border: 1px solid rgba(255,255,255,0.15); }
+</style>
+</head>
+<body>
+<div id="version" style="position:fixed;top:0;right:0;background:#548;color:#fff;font-size:11px;padding:2px 8px;z-index:9999;">v3</div>
+<div id="status">加载中...</div>
+<div id="editor"></div>
+
+<!-- 右键样式菜单（三控制） -->
+<div id="style-menu">
+  <div class="sm-item" data-sub="colour">设置颜色 <span class="sm-arrow">▶</span></div>
+  <div class="sm-item" data-sub="font">字体 <span class="sm-arrow">▶</span></div>
+  <div class="sm-item" data-sub="text_size">文字大小 <span class="sm-arrow">▶</span></div>
+  <div class="sm-sep"></div>
+  <div class="sm-item" data-sub="other">其他 <span class="sm-arrow">▶</span></div>
+</div>
+<div id="style-sub-colour" class="sm-sub"></div>
+<div id="style-sub-font" class="sm-sub">
+  <div class="sm-item" data-cmd="font" data-val="normal">普通</div>
+  <div class="sm-item" data-cmd="font" data-val="hylian">海利亚字体</div>
+</div>
+<div id="style-sub-text_size" class="sm-sub">
+  <div class="sm-item" data-cmd="text_size" data-val="80">80%</div>
+  <div class="sm-item" data-cmd="text_size" data-val="100">100%</div>
+  <div class="sm-item" data-cmd="text_size" data-val="120">120%</div>
+  <div class="sm-item" data-cmd="text_size" data-val="150">150%</div>
+</div>
+<div id="style-sub-other" class="sm-sub"></div>
+
+<script src="./pm/prosemirror.bundle.js"></script>
+<script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+<script>
+/* global PM, QWebChannel, qt */
+const { Schema, EditorState, Plugin, PluginKey, EditorView, keymap, history, undo, redo, baseKeymap } = PM;
+
+// ═══════════════════════════════════════
+// 颜色映射
+// ═══════════════════════════════════════
+const COLOUR_CSS = {
+  "black": "#ddd",
+  "red": "#ff4444", "blue": "#4488ff", "yellow": "#ffff44",
+  "green": "#44cc44", "orange": "#ff9944",
+  "grey": "#999999", "light_green1": "#66ff66",
+  "light_green4": "#44cc44", "light_grey": "#aaaaaa",
+};
+
+// ═══════════════════════════════════════
+// Schema 定义
+// ═══════════════════════════════════════
+const INLINE_CTRL_KINDS = ["pause","sound","sound2","icon","variable","animation","auto_advance","raw"];
+let UI_LANG = "zh_CN";
+
+function uiDescLabel(kind, params) {
+  if (UI_LANG !== "en_US") return descLabel(kind, params);
+  const p = params || {};
+  const labels = {
+    pause: "Pause: " + (p.frames != null ? p.frames + " frames" : (p.length || "?")),
+    sound: "Sound", sound2: "Sound 2", icon: "Icon: " + (p.icon || "?"),
+    variable: "Variable: " + (p.name || "?"), animation: "Animation: " + (p.name || "?"),
+    auto_advance: "Auto advance", raw: "Message continuation"
+  };
+  return labels[kind] || kind;
+}
+
+function makeInlineCtrlSpec(kind) {
+  return {
+    group: "inline",
+    inline: true,
+    atom: true,
+    selectable: true,
+    draggable: true,
+    attrs: {
+      _params: { default: {} },
+    },
+    parseDOM: [{ tag: `span[data-ctrl="${kind}"]` }],
+    toDOM(node) {
+      const label = uiDescLabel(kind, node.attrs._params);
+      return ["span", {
+        class: `inline-ctrl ${kind}`,
+        "data-ctrl": kind,
+        "data-cid": node.attrs._params._cid,
+        "data-params": JSON.stringify(node.attrs._params),
+        title: label,
+        contenteditable: "false",
+      }, label];
+    },
+  };
+}
+
+function descLabel(kind, params) {
+  const p = params || {};
+  switch (kind) {
+    case "pause": return "暂停: " + (p.length || "?");
+    case "sound": return "音效";
+    case "sound2": return "音效2";
+    case "icon": return "图标: " + (p.icon || "?");
+    case "variable": return "变量: " + (p.name || "?");
+    case "animation": return "动画: " + (p.name || "?");
+    case "auto_advance": return "自动推进";
+    case "raw": return "消息延续";
+    default: return kind;
+  }
+}
+
+const nodes = {
+  doc: { content: "block+" },
+  paragraph: {
+    content: "inline*",
+    group: "block",
+    parseDOM: [{ tag: "p" }],
+    toDOM() { return ["p", 0]; },
+  },
+  text: { group: "inline" },
+  choice: {
+    group: "block",
+    atom: true,
+    selectable: false,
+    draggable: false,
+    attrs: {
+      kind: { default: "choice" },
+      _params: { default: {} },
+    },
+    parseDOM: [{ tag: 'div[data-ctrl="choice"]' }],
+    toDOM(node) {
+      const n = (node.attrs._params && node.attrs._params.choice_labels || []).length;
+      return ["div", {
+        class: "choice-block",
+        "data-ctrl": "choice",
+        "data-kind": node.attrs.kind,
+        "data-count": n,
+        contenteditable: "false",
+      }, node.attrs.kind === "single_choice"
+          ? "单选项配置（在 M 菜单中编辑）"
+          : "选项配置（" + n + " 项，在 M 菜单中编辑）"];
+    },
+  },
+};
+
+for (const k of INLINE_CTRL_KINDS) {
+  nodes[k] = makeInlineCtrlSpec(k);
+}
+
+const marks = {
+  colour: {
+    attrs: { colour: {} },
+    parseDOM: [{ tag: "span[data-colour]", getAttrs(dom) { return { colour: dom.getAttribute("data-colour") }; } }],
+    toDOM(mark) { return ["span", { "data-colour": mark.attrs.colour, style: "color:" + (COLOUR_CSS[mark.attrs.colour] || mark.attrs.colour) }, 0]; },
+  },
+  font: {
+    attrs: { font_kind: { default: "normal" } },
+    parseDOM: [{ tag: "span.font-hylian", getAttrs() { return { font_kind: "hylian" }; } }],
+    toDOM(mark) {
+      const cls = mark.attrs.font_kind === "hylian" ? "font-hylian" : "";
+      return ["span", { class: cls }, 0];
+    },
+  },
+  text_size: {
+    attrs: { percent: { default: 100 } },
+    parseDOM: [{ tag: "span[data-ts]", getAttrs(dom) { return { percent: +dom.getAttribute("data-ts") }; } }],
+    toDOM(mark) { return ["span", { "data-ts": mark.attrs.percent, style: "font-size:" + mark.attrs.percent + "%" }, 0]; },
+  },
+};
+
+const schema = new Schema({ nodes: nodes, marks: marks });
+
+// ═══════════════════════════════════════
+// QWebChannel 桥接
+// ═══════════════════════════════════════
+var widget = null;
+var view = null;
+var cidCounter = 100000;
+var suppressChange = false;
+
+const statusEl = document.getElementById("status");
+
+function initChannel() {
+  if (typeof QWebChannel === 'undefined') {
+    statusEl.textContent = 'QWebChannel 未加载';
+    return;
+  }
+  statusEl.textContent = '连接中...';
+  new QWebChannel(qt.webChannelTransport, function(ch) {
+    widget = ch.objects.widget;
+    if (!widget) { statusEl.textContent = 'widget 为 null'; return; }
+    statusEl.textContent = '已连接，等待数据...';
+    widget.ready();
+  });
+}
+
+// ═══════════════════════════════════════
+// 辅助函数
+// ═══════════════════════════════════════
+
+/** 获取第 ti 个段落在文档中的偏移位置 */
+function getParagraphPos(ti) {
+  let count = 0;
+  let pos = -1;
+  view.state.doc.forEach(function(node, offset) {
+    if (node.type === schema.nodes.paragraph) {
+      if (count === ti) { pos = offset; return false; }
+      count++;
+    }
+  });
+  return pos;
+}
+
+/** 获取第 ti 个段落的 Node 及其文档偏移 */
+function getParagraph(ti) {
+  let count = 0;
+  let result = null;
+  view.state.doc.forEach(function(node, offset) {
+    if (node.type === schema.nodes.paragraph) {
+      if (count === ti) { result = { node: node, pos: offset }; return false; }
+      count++;
+    }
+  });
+  return result;
+}
+
+// ═══════════════════════════════════════
+// Python → JS
+// ═══════════════════════════════════════
+
+/** 加载整个文档（手动构建，避免跨包类型冲突） */
+function loadDocument(docJson) {
+  try {
+    const doc = buildDoc(docJson, schema);
+    suppressChange = true;
+    const tr = view.state.tr.replaceWith(0, view.state.doc.content.size, doc.content);
+    view.dispatch(tr);
+    suppressChange = false;
+    statusEl.textContent = UI_LANG === 'en_US'
+      ? `Loaded — ${doc.childCount} paragraphs`
+      : `已加载 — ${doc.childCount} 个段落`;
+    if (UI_LANG === 'en_US') window.setUiLanguage(UI_LANG);
+  } catch(e) {
+    statusEl.textContent = (UI_LANG === 'en_US' ? 'Failed to load document: ' : '文档加载失败: ') + e.message;
+    console.error(e);
+  }
+}
+
+/** 用 schema.create 手动构建文档（不用 nodeFromJSON，避免 CDN 多版本冲突） */
+function buildDoc(docJson, schema) {
+  function buildBlock(block) {
+    if (block.type === 'paragraph') {
+      const inline = (block.content || []).map(item => {
+        if (item.type === 'text') {
+          const marks = (item.marks || []).map(m => {
+            const markType = schema.marks[m.type];
+            return markType ? markType.create(m.attrs) : null;
+          }).filter(Boolean);
+          return schema.text(item.text, marks);
+        } else {
+          const nt = schema.nodes[item.type];
+          return nt ? nt.create(item.attrs) : null;
+        }
+      }).filter(Boolean);
+      return schema.nodes.paragraph.create(null, inline);
+    } else if (block.type === 'choice') {
+      return schema.nodes.choice.create(block.attrs);
+    }
+    return null;
+  }
+  const built = docJson.content.map(buildBlock).filter(Boolean);
+  // Choice 是消息级配置层，无论输入数据原先位于何处都固定在正文末尾。
+  const content = built.filter(node => node.type !== schema.nodes.choice)
+    .concat(built.filter(node => node.type === schema.nodes.choice));
+  return schema.nodes.doc.create(null, content);
+}
+
+/** 在指定位置插入内联控件 */
+function insertInlineCtrl(ti, pos, kind, paramsJson) {
+  if (!view) return;
+  let params = {};
+  try { params = JSON.parse(paramsJson || "{}"); } catch(e) {}
+  params.kind = kind;
+  const info = getParagraph(ti);
+  if (!info) return;
+  const para = info.node;
+  const insertPos = info.pos + 1 + Math.min(pos, para.content.size);
+  const tr = view.state.tr;
+  const nodeType = schema.nodes[kind];
+  if (!nodeType) return;
+  const node = nodeType.create({ _params: params });
+  tr.insert(insertPos, node);
+  view.dispatch(tr);
+}
+
+/** 删除第 ti 个段落中的第 ci 个内联控件 */
+function deleteInlineCtrl(ti, ci) {
+  if (!view) return;
+  const info = getParagraph(ti);
+  if (!info) return;
+  const para = info.node;
+  const paraPos = info.pos;
+  let count = 0;
+  para.forEach((node, offset) => {
+    if (node.isInline && node.isAtom && count === ci) {
+      const tr = view.state.tr.delete(paraPos + 1 + offset, paraPos + 1 + offset + node.nodeSize);
+      view.dispatch(tr);
+      return false;
+    }
+    if (node.isInline && node.isAtom) count++;
+  });
+}
+
+/** 对第 ti 个段落全文应用 mark */
+function applyMarkToParagraph(ti, markType, attrsJson) {
+  if (!view) return;
+  const info = getParagraph(ti);
+  if (!info) return;
+  const para = info.node;
+  const paraPos = info.pos;
+  const attrs = JSON.parse(attrsJson || "{}");
+  const mark = schema.marks[markType].create(attrs);
+  // 移除旧同类型 mark，添加新 mark
+  const tr = view.state.tr;
+  tr.addMark(paraPos + 1, paraPos + 1 + para.content.size, mark);
+  view.dispatch(tr);
+}
+
+/** 移除第 ti 个段落的指定类型 mark */
+function removeMarkFromParagraph(ti, markType) {
+  if (!view) return;
+  const info = getParagraph(ti);
+  if (!info) return;
+  const para = info.node;
+  const paraPos = info.pos;
+  const mark = schema.marks[markType];
+  const tr = view.state.tr;
+  tr.removeMark(paraPos + 1, paraPos + 1 + para.content.size, mark);
+  view.dispatch(tr);
+}
+
+/** 更新第 ti 段中第 ci 个内联控件的 _params */
+function updateInlineCtrl(ti, ci, paramsJson) {
+  if (!view) return;
+  const info = getParagraph(ti);
+  if (!info) return;
+  const para = info.node;
+  const paraPos = info.pos;
+  let count = 0;
+  para.forEach((node, offset) => {
+    if (node.isInline && node.isAtom) {
+      if (count === ci) {
+        const params = JSON.parse(paramsJson);
+        const tr = view.state.tr;
+        tr.setNodeMarkup(paraPos + 1 + offset, null, { _params: params });
+        view.dispatch(tr);
+        return false;
+      }
+      count++;
+    }
+  });
+}
+
+/** 按 _cid 更新内联控件的 _params */
+function updateInlineCtrlByCid(cid, paramsJson) {
+  if (!view) return;
+  const params = JSON.parse(paramsJson);
+  let found = false;
+  view.state.doc.forEach(function(block, blockPos) {
+    if (found) return;
+    if (block.type === schema.nodes.paragraph) {
+      block.forEach(function(node, offset) {
+        if (found) return;
+        if (node.isInline && node.isAtom) {
+          if (node.attrs._params && node.attrs._params._cid === cid) {
+            params.kind = node.type.name;
+            const tr = view.state.tr;
+            tr.setNodeMarkup(blockPos + 1 + offset, null, { _params: params });
+            view.dispatch(tr);
+            found = true;
+          }
+        }
+      });
+    }
+  });
+}
+
+/** 添加 choice 块 */
+function addChoice(kind, paramsJson) {
+  if (!view) return;
+  const params = JSON.parse(paramsJson);
+  const node = schema.nodes.choice.create({ kind, _params: params });
+  const tr = view.state.tr;
+  const doc = view.state.doc;
+  tr.insert(doc.content.size, node);
+  view.dispatch(tr);
+}
+
+/** 在 si 处插入空段落 */
+function insertParagraph(si) {
+  if (!view) return;
+  const doc = view.state.doc;
+  let pos = 0;
+  let count = 0;
+  doc.forEach((node, offset) => {
+    if (node.type === schema.nodes.paragraph) {
+      if (count === si) { pos = offset; return false; }
+      count++;
+    }
+  });
+  if (pos === 0 && si >= count) {
+    doc.forEach((node, offset) => {
+      if (node.type === schema.nodes.choice) { pos = offset; return false; }
+    });
+    if (pos === 0) pos = doc.content.size;
+  }
+  const node = schema.nodes.paragraph.create();
+  const tr = view.state.tr.insert(pos, node);
+  view.dispatch(tr);
+}
+
+/** 删除 choice 块 */
+function deleteChoice() {
+  if (!view) return;
+  const doc = view.state.doc;
+  let found = null;
+  doc.forEach((node, offset) => {
+    if (node.type === schema.nodes.choice) { found = {offset, size: node.nodeSize}; return false; }
+  });
+  if (found) {
+    const tr = view.state.tr.delete(found.offset, found.offset + found.size);
+    view.dispatch(tr);
+  }
+}
+
+/** 更新 choice 块的 _params */
+function updateChoice(paramsJson) {
+  if (!view) return;
+  const doc = view.state.doc;
+  let found = null;
+  doc.forEach((node, offset) => {
+    if (node.type === schema.nodes.choice) { found = {offset, node}; return false; }
+  });
+  if (!found) return;
+  const params = JSON.parse(paramsJson);
+  const tr = view.state.tr;
+  tr.setNodeMarkup(found.offset, null, { kind: found.node.attrs.kind, _params: params });
+  view.dispatch(tr);
+}
+
+// ═══════════════════════════════════════
+// JS → Python：文档变更通知
+// ═══════════════════════════════════════
+
+function notifyChange() {
+  if (!view || !widget || suppressChange) return;
+  const docJson = view.state.doc.toJSON();
+  widget.onDocumentChanged(JSON.stringify(docJson));
+}
+
+// ═══════════════════════════════════════
+// 双击 badge → 编辑
+// ═══════════════════════════════════════
+
+function handleDoubleClick(view, pos, node, nodePos) {
+  if (!widget || !node) return false;
+  const kind = node.type.name;
+  if (INLINE_CTRL_KINDS.includes(kind)) {
+    var cid = node.attrs._params._cid;
+    if (cid != null) {
+      widget.editControlByCid(cid);
+      return true;
+    }
+  }
+  if (node.type === schema.nodes.choice) {
+    // choice 由选项池管理，不在文本编辑器中直接编辑
+    return true;
+  }
+  return false;
+}
+
+// ═══════════════════════════════════════
+// 右键样式菜单
+// ═══════════════════════════════════════
+
+(function() {
+  const menu = document.getElementById('style-menu');
+  const subColour = document.getElementById('style-sub-colour');
+  const subFont = document.getElementById('style-sub-font');
+  const subTextSize = document.getElementById('style-sub-text_size');
+  const subOther = document.getElementById('style-sub-other');
+  const allSubs = [subColour, subFont, subTextSize, subOther];
+  window.setUiLanguage = function(lang) {
+    UI_LANG = lang || 'zh_CN';
+    document.documentElement.lang = UI_LANG === 'en_US' ? 'en' : 'zh-CN';
+    if (UI_LANG !== 'en_US') return;
+    const headings = {colour:'Color', font:'Font', text_size:'Text size', other:'Other'};
+    menu.querySelectorAll('[data-sub]').forEach(function(el) {
+      const arrow = el.querySelector('.sm-arrow');
+      el.firstChild.nodeValue = headings[el.dataset.sub] + ' ';
+      if (arrow) arrow.textContent = '▶';
+    });
+    subFont.innerHTML = '<div class="sm-item" data-cmd="font" data-val="normal">Normal</div>' +
+      '<div class="sm-item" data-cmd="font" data-val="hylian">Hylian</div>';
+    const englishColours = [['Clear color','black'],['Red','red'],['Blue','blue'],['Yellow','yellow'],
+      ['Green','green'],['Orange','orange'],['Grey','grey'],['Light green 1','light_green1'],
+      ['Light green 4','light_green4'],['Light grey','light_grey']];
+    subColour.innerHTML = englishColours.map(function(c) {
+      return '<div class="sm-item" data-cmd="colour" data-val="' + c[1] + '"><span>' + c[0] +
+        '</span><span class="sm-swatch" style="background:' + (COLOUR_CSS[c[1]] || c[1]) + '"></span></div>';
+    }).join('');
+    const controls = [['Pause','pause'],['Sound','sound'],['Sound 2','sound2'],['Icon','icon'],
+      ['Variable','variable'],['Animation','animation'],['Auto advance','auto_advance'],
+      ['Message continuation','raw']];
+    subOther.innerHTML = controls.map(function(c) {
+      return '<div class="sm-item" data-cmd="insertCtrl" data-val="' + c[1] + '">' + c[0] + '</div>';
+    }).join('');
+    statusEl.textContent = view ? 'Ready' : 'Connecting...';
+    document.querySelectorAll('.choice-block').forEach(function(el) {
+      const count = Number(el.dataset.count || 0);
+      el.textContent = el.dataset.kind === 'single_choice'
+        ? 'Single-choice config (edit in the M menu)'
+        : 'Choice config (' + count + ' options; edit in the M menu)';
+    });
+  };
+  let menuRange = null; // 右键时保存的选区范围
+  let menuCursor = null; // 右键时光标位置 {ti, pos}
+
+  // 填充颜色子菜单
+  var colours = [
+    ["清空颜色", "black"],
+    ["红", "red"], ["蓝", "blue"], ["黄", "yellow"],
+    ["绿", "green"], ["橙", "orange"], ["灰", "grey"],
+    ["浅绿1", "light_green1"], ["浅绿4", "light_green4"], ["浅灰", "light_grey"],
+  ];
+  subColour.innerHTML = colours.map(function(c) {
+    return '<div class="sm-item" data-cmd="colour" data-val="' + c[1] + '">'
+      + '<span>' + c[0] + '</span>'
+      + '<span class="sm-swatch" style="background:' + (COLOUR_CSS[c[1]] || c[1]) + '"></span>'
+      + '</div>';
+  }).join('');
+
+  // 填充"其他"子菜单（内联控件）
+  var otherCtrls = [
+    ["暂停", "pause"], ["音效", "sound"], ["音效2", "sound2"],
+    ["图标", "icon"], ["变量", "variable"], ["动画", "animation"],
+    ["自动推进", "auto_advance"], ["消息延续", "raw"],
+  ];
+  subOther.innerHTML = otherCtrls.map(function(c) {
+    return '<div class="sm-item" data-cmd="insertCtrl" data-val="' + c[1] + '">' + c[0] + '</div>';
+  }).join('');
+
+  function hideAll() {
+    menu.style.display = 'none';
+    allSubs.forEach(function(s) { s.style.display = 'none'; });
+  }
+
+  function showMenu(x, y) {
+    menu.style.left = x + 'px';
+    menu.style.top = y + 'px';
+    menu.style.display = 'block';
+  }
+
+  function showSub(sub, parentEl) {
+    hideAll();
+    menu.style.display = 'block'; // keep parent menu visible
+    var rect = parentEl.getBoundingClientRect();
+    sub.style.left = (rect.right + 2) + 'px';
+    sub.style.top = rect.top + 'px';
+    sub.style.display = 'block';
+  }
+
+  // 点击菜单项 → 应用 mark / 插入控件
+  function applyMarkToRange(cmd, val) {
+    if (cmd === 'insertCtrl') {
+      // 在光标位置插入控件（不需要选区）
+      if (!menuCursor) return;
+      var nodeType = schema.nodes[val];
+      if (!nodeType) return;
+      var cid = cidCounter++;
+      var node = nodeType.create({ _params: { _cid: cid } });
+      var paraOff = menuCursor.paraOff;
+      var $para = view.state.doc.resolve(paraOff + 1);
+      var paraNode = $para.parent;
+      var contentPos = Math.min(menuCursor.pos, paraNode.content.size);
+      var insertPos = paraOff + 1 + contentPos;
+      view.dispatch(view.state.tr.insert(insertPos, node));
+      console.log('[insertCtrl] cid=' + cid);
+      if (widget) widget.editControlByCid(cid, JSON.stringify(view.state.doc.toJSON()));
+      hideAll();
+      return;
+    }
+
+    // 三控制：需要选区
+    if (!menuRange || menuRange.from === menuRange.to) return;
+    var tr = view.state.tr;
+    var from = menuRange.from;
+    var to = menuRange.to;
+
+    if (cmd === 'colour') {
+      // 先移除旧 colour mark
+      tr.removeMark(from, to, schema.marks.colour);
+      // 黑色 = 默认，不加 mark
+      if (val !== 'black') {
+        tr.addMark(from, to, schema.marks.colour.create({ colour: val }));
+      }
+    } else if (cmd === 'font') {
+      tr.removeMark(from, to, schema.marks.font);
+      if (val !== 'normal') {
+        tr.addMark(from, to, schema.marks.font.create({ font_kind: val }));
+      }
+    } else if (cmd === 'text_size') {
+      tr.removeMark(from, to, schema.marks.text_size);
+      if (parseInt(val) !== 100) {
+        tr.addMark(from, to, schema.marks.text_size.create({ percent: parseInt(val) }));
+      }
+    }
+    view.dispatch(tr);
+    hideAll();
+  }
+
+  // 右键事件：显示菜单
+  document.getElementById('editor').addEventListener('contextmenu', function(e) {
+    var target = e.target;
+    // 如果在 badge 或 choice 上，不拦截（用 ProseMirror 默认处理）
+    if (target.closest('.inline-ctrl') || target.closest('.choice-block')) return;
+
+    // 保存当前选区（样式用）
+    var sel = view.state.selection;
+    menuRange = sel.empty ? null : { from: sel.from, to: sel.to };
+
+    // 从右键坐标反查文档位置（右键不移动 PM 光标）
+    var coords = { left: e.pageX, top: e.pageY };
+    var clickPos = view.posAtCoords(coords);
+    if (clickPos) {
+      var pos = clickPos.pos;
+      var $pos = view.state.doc.resolve(pos);
+      // 向上找 paragraph 祖先（pos 可能在 text node 内，深度=2）
+      var paraDepth = -1;
+      for (var d = 1; d <= $pos.depth; d++) {
+        if ($pos.node(d).type === schema.nodes.paragraph) {
+          paraDepth = d;
+          break;
+        }
+      }
+      if (paraDepth >= 0) {
+        var paraStart = $pos.start(paraDepth);
+        menuCursor = { ti: $pos.index(paraDepth), pos: pos - paraStart - 1, paraOff: paraStart };
+      } else {
+        menuCursor = { ti: 0, pos: 0, paraOff: 0 };
+      }
+    } else {
+      menuCursor = { ti: 0, pos: 0, paraOff: 0 };
+    }
+
+    e.preventDefault();
+    showMenu(e.pageX, e.pageY);
+  });
+
+  // 左键点击其他地方关闭菜单（用 mousedown 避免右键自身的 click 事件误关）
+  document.addEventListener('mousedown', function(e) {
+    if (e.button !== 2) {
+      if (!e.target.closest('#style-menu') && !e.target.closest('.sm-sub')) {
+        hideAll();
+      }
+    }
+  });
+
+  // Shift + 滚轮缩放（通过 Python 调用 QWebEngine 原生 zoom，不影响坐标）
+  document.addEventListener('wheel', function(e) {
+    if (e.shiftKey) {
+      e.preventDefault();
+      var editorEl = document.getElementById('editor');
+      var cur = parseFloat(editorEl.dataset.zoom) || 1;
+      cur += e.deltaY > 0 ? -0.1 : 0.1;
+      cur = Math.round(Math.max(0.3, Math.min(3, cur)) * 10) / 10;
+      editorEl.dataset.zoom = cur;
+      if (widget) widget.setZoom(cur);
+    }
+  }, { passive: false });
+
+  // 菜单项 hover → 显示子菜单
+  menu.querySelectorAll('.sm-item[data-sub]').forEach(function(item) {
+    item.addEventListener('mouseenter', function() {
+      var subId = 'style-sub-' + item.getAttribute('data-sub');
+      var sub = document.getElementById(subId);
+      if (sub) showSub(sub, item);
+    });
+  });
+
+  // 菜单项 click → 执行命令
+  menu.querySelectorAll('.sm-item[data-cmd]').forEach(function(item) {
+    item.addEventListener('click', function() {
+      applyMarkToRange(item.getAttribute('data-cmd'), item.getAttribute('data-val'));
+    });
+  });
+
+  // 子菜单项 click
+  allSubs.forEach(function(sub) {
+    sub.querySelectorAll('.sm-item[data-cmd]').forEach(function(item) {
+      item.addEventListener('click', function() {
+        applyMarkToRange(item.getAttribute('data-cmd'), item.getAttribute('data-val'));
+      });
+    });
+  });
+})();
+
+// ═══════════════════════════════════════
+// Plugins
+// ═══════════════════════════════════════
+
+function createPlugins() {
+  return [
+    history(),
+    keymap({
+      "Mod-z": undo,
+      "Mod-y": redo,
+      "Mod-Shift-z": redo,
+      "Backspace": (state, dispatch) => {
+        // 如果光标前是一个 inline ctrl 节点，删除它
+        const { $from } = state.selection;
+        if ($from.parentOffset === 0 && $from.nodeBefore) {
+          const nb = $from.nodeBefore;
+          if (nb.isInline && nb.isAtom && dispatch) {
+            const tr = state.tr.delete($from.pos - nb.nodeSize, $from.pos);
+            dispatch(tr);
+            return true;
+          }
+        }
+        return false;
+      },
+    }),
+    keymap(baseKeymap),
+    new Plugin({
+      key: new PluginKey("changeNotifier"),
+      view() {
+        return {
+          update(view, prevState) {
+            if (view.state.doc !== prevState.doc) {
+              notifyChange();
+            }
+          }
+        };
+      },
+    }),
+  ];
+}
+
+// ═══════════════════════════════════════
+// 全局 plugins（只创建一次，避免 key 冲突）
+// ═══════════════════════════════════════
+var allPlugins = createPlugins();
+
+// ═══════════════════════════════════════
+// 启动：创建空编辑器 + 初始化 QWebChannel
+// ═══════════════════════════════════════
+(function() {
+  var state = EditorState.create({
+    doc: schema.node("doc", null, [schema.node("paragraph")]),
+    plugins: allPlugins,
+  });
+  view = new EditorView(document.getElementById("editor"), { state: state });
+
+  // 双击 badge / choice → 编辑
+  document.getElementById('editor').addEventListener('dblclick', function(e) {
+    var target = e.target;
+    var ctrlEl = target.closest('.inline-ctrl');
+    if (ctrlEl) {
+      var cid = parseInt(ctrlEl.dataset.cid);
+      if (widget && !isNaN(cid)) {
+        console.log('[dblclick] cid=' + cid);
+        widget.editControlByCid(cid, JSON.stringify(view.state.doc.toJSON()));
+      }
+      return;
+    }
+    var choiceEl = target.closest('.choice-block');
+    if (choiceEl) {
+      var coords = { left: e.clientX, top: e.clientY };
+      var result = view.posAtCoords(coords);
+      if (result && widget) {
+        widget.editChoice();
+      }
+    }
+  });
+
+  initChannel();
+})();
+</script>
+
+</body>
+</html>

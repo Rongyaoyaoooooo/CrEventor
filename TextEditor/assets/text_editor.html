@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root { background: #1e1e1e; color: #ddd; font-family: "Segoe UI", sans-serif; font-size: 14px; }
+    body { margin: 0; padding: 4px; }
+    /* ── Text ── */
+    .b-text { margin: 0; padding-left: 8px; border-left: 2px solid #3a3a3a; }
+    .b-text-inner { min-height: 22px; padding: 4px 8px; line-height: 1.6; outline: none; white-space: pre-wrap; word-break: break-word; background: #2a2a2a; border-radius: 3px; }
+    .b-text-inner:focus { background: #333; }
+    .b-text-inner.drop-target { box-shadow: inset 0 0 0 2px #5a5; }
+    .drag-caret { background: #0f0; pointer-events: none; z-index: 9999; animation: blink 0.5s step-end infinite; }
+    @keyframes blink { 50% { opacity: 0; } }
+    .font-hylian { font-weight: bold; font-style: italic; }
+    /* ── Slot ── */
+    .b-slot { display: flex; align-items: center; gap: 4px; margin: 0; padding: 1px 4px 1px 6px; min-height: 18px; border-left: 2px solid #2a2a3a; }
+    .b-slot-chips { display: flex; flex-wrap: wrap; gap: 3px; flex: 1; }
+    .b-chip { display: inline-flex; align-items: center; gap: 3px; padding: 1px 4px 1px 6px; border-radius: 3px; font-size: 11px; user-select: none; background: #3a4a5a; color: #aac; border: 1px solid #4a5a6a; cursor: grab; }
+    .b-chip-x { display: none; font-size: 10px; color: #d66; cursor: pointer; padding: 0 2px; }
+    .b-chip:hover .b-chip-x { display: inline; }
+    .b-chip-x:hover { background: #c33; color: #fff; border-radius: 2px; }
+    .b-slot-add { width: 20px; height: 20px; padding: 0; line-height: 18px; border: none; border-radius: 3px; background: #3a4a3a; color: #8a8; font-size: 14px; cursor: pointer; }
+    .b-slot-add:hover { background: #5a5; color: #fff; }
+    .dragging { opacity: 0.4; }
+    .drop-hl { background: #2a3a2a !important; box-shadow: inset 0 0 0 2px #5a5; }
+    /* ── Inline Variable ── */
+    .b-inline-var { display: inline; padding: 1px 5px; background: #3a4a3a; color: #8c8; border: 1px solid #5a7a5a; border-radius: 3px; font-size: 11px; cursor: pointer; user-select: none; vertical-align: middle; }
+    .b-inline-var:hover { background: #4a6a4a; color: #beb; border-color: #6a6; }
+    /* ── Control Chooser Popup ── */
+    #ctrl-popup { position: fixed; display: none; background: #2a2a2a; border: 1px solid #555; border-radius: 6px; z-index: 200; min-width: 280px; max-width: 420px; box-shadow: 2px 4px 16px rgba(0,0,0,0.5); }
+    .ctrl-popup-title { padding: 8px 12px; font-size: 12px; color: #aaa; border-bottom: 1px solid #444; }
+    .ctrl-popup-body { padding: 10px 12px; max-height: 380px; overflow-y: auto; }
+    .ch-group { margin-bottom: 10px; }
+    .ch-group-label { font-size: 10px; color: #888; text-transform: uppercase; margin-bottom: 4px; padding-left: 2px; letter-spacing: 1px; }
+    .ch-group-btns { display: flex; flex-wrap: wrap; gap: 4px; }
+    .ch-group-btns button { padding: 6px 10px; border: 1px solid #555; border-radius: 4px; background: #333; color: #ccc; font-size: 12px; cursor: pointer; white-space: nowrap; }
+    .ch-group-btns button:hover { background: #4a6a4a; color: #fff; border-color: #6a6; }
+    .ch-group-btns button .ch-desc { display: block; font-size: 9px; color: #888; }
+    /* ── 右键菜单 ── */
+    #style-menu { position: fixed; background: #2a2a2a; border: 1px solid #555; border-radius: 6px; padding: 2px 0; z-index: 200; min-width: 100px; box-shadow: 2px 2px 10px rgba(0,0,0,0.6); }
+    .sm-item { position: relative; padding: 7px 12px; font-size: 12px; color: #ccc; cursor: pointer; white-space: nowrap; display: flex; justify-content: space-between; align-items: center; }
+    .sm-item:hover { background: #4a5a4a; color: #fff; }
+    .sm-item .sm-arrow { font-size: 9px; color: #888; margin-left: 24px; }
+    .sm-sub { position: fixed; display: none; background: #2a2a2a; border: 1px solid #555; border-radius: 4px; padding: 2px 0; z-index: 201; min-width: 110px; box-shadow: 2px 2px 8px rgba(0,0,0,0.5); }
+    .sm-sub .sm-item { padding: 5px 12px; font-size: 11px; }
+    .sm-sep { height: 1px; background: #444; margin: 2px 8px; }
+    .sm-swatch { display: inline-block; width: 36px; height: 13px; border-radius: 2px; margin-right: 6px; vertical-align: middle; border: 1px solid rgba(255,255,255,0.15); }
+  </style>
+  <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+</head>
+<body>
+  <div id="debug" style="color:#f80;font-size:12px;padding:4px 8px;">HTML OK — 等待通道连接...</div>
+  <pre id="debug-state" style="color:#6a6;font-size:10px;padding:4px 8px;background:#111;margin:0;max-height:200px;overflow:auto;display:none;"></pre>
+  <div id="blocks-container"></div>
+  <script>
+    // ═══════════════════════════════════════════════
+    var widget = null;
+    var blocks = [];
+    var _ignoreBlurEl = null;  // keydown (Enter/Backspace) 后忽略紧接着的 blur
+    var _pendingCursor = null; // {ti, pos} 回车/退格后恢复光标
+    var _isDragging = false;   // 拖拽过程中禁止 blur 触发 updateText
+    var _dragCaret = null;     // 拖拽光标指示器
+
+    // 文档级 dragend 安全网：确保无论哪个元素的 dragend 没触发，状态都复位
+    document.addEventListener('dragend', function() { _isDragging = false; removeDragCaret(); clearDropHL(); clearDropTarget(); });
+
+    function showDragCaret(el, x, y) {
+      removeDragCaret();
+      var r = document.caretRangeFromPoint(x, y);
+      if (!r || !el.contains(r.startContainer)) return;
+      var rect = r.getBoundingClientRect();
+      var s = document.createElement('div');
+      s.className = 'drag-caret';
+      s.style.cssText = 'position:fixed; left:' + rect.left + 'px; top:' + rect.top + 'px; width:2px; height:' + (rect.height || 16) + 'px;';
+      _dragCaret = s;
+      document.body.appendChild(s);
+    }
+    function removeDragCaret() {
+      if (_dragCaret && _dragCaret.parentNode) _dragCaret.parentNode.removeChild(_dragCaret);
+      _dragCaret = null;
+    }
+
+    function refreshDebug() {
+      var d = document.getElementById('debug-state');
+      if (!widget) { d.style.display = 'none'; return; }
+      widget.getDebugInfo(function(info) {
+        try {
+          var obj = JSON.parse(info);
+          var txt = 'text: ' + JSON.stringify(obj.text) + '\n';
+          txt += 'lines: ' + JSON.stringify(obj.lines || []) + '\n';
+          txt += 'annotations: ' + JSON.stringify(obj.annotations, null, 2) + '\n';
+          txt += 'contents_len: ' + obj.contents_len;
+          d.textContent = txt;
+          d.style.display = 'block';
+        } catch(e) { d.textContent = 'parse err: ' + e; }
+      });
+    }
+
+    function initChannel() {
+      var dbg = document.getElementById('debug');
+      if (typeof QWebChannel === 'undefined') {
+        dbg.textContent = 'QWebChannel 未加载！';
+        return;
+      }
+      dbg.textContent = 'HTML OK — QWebChannel 已加载，连接中...';
+      new QWebChannel(qt.webChannelTransport, function(ch) {
+        dbg.textContent = 'HTML OK — 通道已连接，等待数据...';
+        widget = ch.objects.widget;
+        if (!widget) { dbg.textContent = '通道已连接但 widget 为 null！'; return; }
+        widget.blocksChanged.connect(function() {
+          widget.getBlocks(function(raw) {
+            try {
+              var parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+              blocks = parsed;
+              dbg.textContent = 'HTML OK — 收到 ' + blocks.length + ' 个块';
+            } catch(e) {
+              blocks = [];
+              dbg.textContent = 'HTML OK — JSON 解析失败: ' + e;
+            }
+            render();
+          });
+          refreshDebug();
+        });
+        dbg.textContent = 'HTML OK — 调用 ready()...';
+        widget.ready();
+      });
+    }
+
+    function render() {
+      // 清除当前选区，防止旧 DOM 元素移除后残留光标
+      var sel = window.getSelection();
+      if (sel) sel.removeAllRanges();
+      var c = document.getElementById('blocks-container');
+      c.innerHTML = '';
+      if (!blocks || blocks.length === 0) { c.textContent = '暂无数据'; return; }
+      for (var i = 0; i < blocks.length; i++) {
+        var b = blocks[i];
+        if (b.type === 'choice') c.appendChild(renderChoice(b));
+        else if (b.type === 'slot') c.appendChild(renderSlot(b));
+        else c.appendChild(renderText(b));
+      }
+      if (_pendingCursor) { restoreCursor(); }
+    }
+
+    function restoreCursor() {
+      var target = _pendingCursor;
+      _pendingCursor = null;
+      if (!target) return;
+
+      var textEls = document.querySelectorAll('.b-text-inner');
+      // 收集非 slot 的 text block
+      var textBlocks = [];
+      for (var i = 0; i < blocks.length; i++) {
+        if (blocks[i].type !== 'slot') textBlocks.push(blocks[i]);
+      }
+
+      for (var i = 0; i < textBlocks.length && i < textEls.length; i++) {
+        var b = textBlocks[i];
+        var el = textEls[i];
+        var segIdx = -1;
+
+        if (b.segments) {
+          for (var s = 0; s < b.segments.length; s++) {
+            var seg = b.segments[s];
+            if (seg.type === 'variable') continue;
+            if (seg.ti === target.ti) { segIdx = s; break; }
+          }
+          if (segIdx < 0) continue;
+        } else if (b.ti === target.ti) {
+          segIdx = -1;
+        } else {
+          continue;
+        }
+
+        // 找到了目标元素
+        el.focus();
+        var sel = window.getSelection();
+        var range = document.createRange();
+
+        if (segIdx >= 0 && b.segments) {
+          var spans = el.querySelectorAll('span');
+          var span = spans[segIdx];
+          if (span) {
+            var tn = span.firstChild;
+            if (tn && tn.nodeType === 3) {
+              range.setStart(tn, Math.min(target.pos, tn.length));
+            } else {
+              range.setStart(span, 0);
+            }
+          }
+        } else {
+          var tn = el.firstChild;
+          if (tn && tn.nodeType === 3) {
+            range.setStart(tn, Math.min(target.pos, tn.length));
+          } else {
+            range.setStart(el, 0);
+          }
+        }
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+        return;
+      }
+    }
+
+    function renderText(b) {
+      var w = document.createElement('div');
+      w.className = 'b-text';
+      var el = document.createElement('div');
+      el.className = 'b-text-inner';
+      el.contentEditable = 'true';
+
+      if (b.segments) {
+        for (var s = 0; s < b.segments.length; s++) {
+          var seg = b.segments[s];
+          if (seg.type === 'variable') {
+            var inlineEl = document.createElement('span');
+            inlineEl.className = 'b-inline-var';
+            inlineEl.textContent = seg.label;
+            inlineEl.setAttribute('data-marker', seg.marker || '\uE000');
+            inlineEl.contentEditable = 'false';
+            inlineEl.draggable = true;
+            inlineEl.addEventListener('dragstart', function(ti_copy, pos_copy, kind_copy) {
+              return function(e) {
+                _isDragging = true;
+                e.dataTransfer.setData('text/x-ctrl', JSON.stringify({inline:true, ti:ti_copy, pos:pos_copy, kind:kind_copy}));
+                e.dataTransfer.effectAllowed = 'move';
+                this.classList.add('dragging');
+              };
+            }(seg.ti, seg.pos, seg.kind));
+            inlineEl.addEventListener('dragend', function() { _isDragging = false; removeDragCaret(); this.classList.remove('dragging'); clearDropHL(); clearDropTarget(); });
+            inlineEl.addEventListener('dblclick', function(ti_copy, pos_copy) {
+              return function(ev) { ev.stopPropagation(); if (widget) widget.editControlAt(ti_copy, pos_copy); };
+            }(seg.ti, seg.pos));
+            el.appendChild(inlineEl);
+            continue;
+          }
+          var span = document.createElement('span');
+          var st = seg.style || {};
+          if (st.colour) span.style.color = st.colour;
+          if (st.font_kind === 'hylian') span.classList.add('font-hylian');
+          if (st.text_size) span.style.fontSize = (st.text_size / 100) + 'em';
+          span.textContent = seg.text;
+          el.appendChild(span);
+        }
+        el.addEventListener('blur', function(e) {
+          if (el === _ignoreBlurEl) { _ignoreBlurEl = null; return; }
+          if (_isDragging) return;
+          if (!document.contains(el)) return;
+          // 焦点移到了 chip 或 inline badge → 跳过 rebuild，避免销毁正要拖的元素
+          var rt = e.relatedTarget;
+          if (rt && (rt.closest('.b-chip') || rt.closest('.b-inline-var'))) return;
+          var fullText = '';
+          function collectText(node) {
+            for (var child = node.firstChild; child; child = child.nextSibling) {
+              if (child.nodeType === 3) {
+                fullText += child.textContent;
+              } else if (child.classList && child.classList.contains('b-inline-var')) {
+                fullText += child.getAttribute('data-marker') || '\uE000';
+              } else {
+                collectText(child);
+              }
+            }
+          }
+          collectText(el);
+          if (widget) widget.updateText(b.ti, fullText);
+        });
+      } else {
+        var st2 = b.style || {};
+        if (st2.colour) el.style.color = st2.colour;
+        if (st2.font_kind === 'hylian') el.classList.add('font-hylian');
+        if (st2.text_size) el.style.fontSize = (st2.text_size / 100) + 'em';
+        el.textContent = b.text;
+        el.addEventListener('blur', function(e) {
+          if (el === _ignoreBlurEl) { _ignoreBlurEl = null; return; }
+          if (_isDragging) return;
+          if (!document.contains(el)) return;
+          // 焦点移到了 chip 或 inline badge → 跳过 rebuild，避免销毁正要拖的元素
+          var rt = e.relatedTarget;
+          if (rt && (rt.closest('.b-chip') || rt.closest('.b-inline-var'))) return;
+          var fullText = '';
+          function collectText(node) {
+            for (var child = node.firstChild; child; child = child.nextSibling) {
+              if (child.nodeType === 3) {
+                fullText += child.textContent;
+              } else if (child.classList && child.classList.contains('b-inline-var')) {
+                fullText += child.getAttribute('data-marker') || '\uE000';
+              } else {
+                collectText(child);
+              }
+            }
+          }
+          collectText(el);
+          if (fullText !== b.text && widget) widget.updateText(b.ti, fullText);
+        });
+      }
+
+      // ── 拖入 chip 到文本中间 ──
+      el.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        el.classList.add('drop-target');
+        showDragCaret(el, e.clientX, e.clientY);
+      });
+      el.addEventListener('dragleave', function(e) {
+        el.classList.remove('drop-target');
+        removeDragCaret();
+      });
+      el.addEventListener('drop', function(e) {
+        e.preventDefault();
+        el.classList.remove('drop-target');
+        removeDragCaret();
+        try {
+          var raw = e.dataTransfer.getData('text/x-ctrl');
+          if (!raw || !widget) return;
+          var info = JSON.parse(raw);
+          // 用 drop 点坐标算出字符偏移
+          var range = document.caretRangeFromPoint(e.clientX, e.clientY);
+          if (!range || !el.contains(range.startContainer)) return;
+          var offset = 0;
+          var walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null);
+          var tn;
+          while ((tn = walker.nextNode())) {
+            if (tn.parentElement && tn.parentElement.classList.contains('b-inline-var')) continue;
+            if (tn === range.startContainer) { offset += range.startOffset; break; }
+            offset += tn.length;
+          }
+          // 合并块：映射到正确 ti+pos
+          var actualTi = b.ti;
+          var actualPos = offset;     // clean-text，用于 restoreCursor
+          var _textPos = offset;      // _text 坐标，用于 Python
+          if (b.segments) {
+            var segInfo = getCursorSegmentWithOffset(b, offset);
+            actualTi = segInfo.ti;
+            actualPos = segInfo.pos;  // clean-text within the segment
+            // _textPos = 行内偏移（含 PUA 标记）：累加目标 segment 之前的所有字符
+            _textPos = 0;
+            for (var j = 0; j < segInfo.s; j++) {
+              var segj = b.segments[j];
+              if (segj.type === 'variable') {
+                _textPos += 1;
+              } else {
+                _textPos += segj.text.length;
+              }
+            }
+            _textPos += actualPos;
+          }
+          if (info.si !== undefined) {
+            // 来源是 slot chip
+            _pendingCursor = {ti: actualTi, pos: actualPos + 1};
+            widget.moveChipToText(info.si, info.ci, actualTi, _textPos);
+          } else if (info.inline) {
+            // 来源是字间 badge
+            _pendingCursor = {ti: actualTi, pos: actualPos + 1};
+            widget.moveInlineAt(info.ti, info.pos, actualTi, _textPos);
+          }
+          _isDragging = false;
+        } catch(ex) { _isDragging = false; }
+      });
+
+      el.addEventListener('contextmenu', function(e) {
+        e.preventDefault(); e.stopPropagation();
+        var sel = getSelOffsets(el);
+        var cursorPos = getCursorTextOffset(el);
+        var actualTi = b.ti;
+        var adjStart = sel ? sel.start : -1;
+        var adjEnd = sel ? sel.end : -1;
+        var selMulti = null;
+
+        // 合并块：探测选区是否跨 segment
+        if (b.segments && adjStart >= 0 && adjEnd > adjStart) {
+          var pos = 0, segBegin = -1, segEnd = -1, posAtStart = 0;
+          for (var s = 0; s < b.segments.length; s++) {
+            var seg = b.segments[s];
+            if (seg.type === 'variable') continue;
+            var segLen = seg.text.length;
+            if (adjStart < pos + segLen && segBegin < 0) { segBegin = s; posAtStart = pos; }
+            if (adjEnd <= pos + segLen) { segEnd = s; break; }
+            pos += segLen;
+          }
+          if (segEnd < 0) segEnd = b.segments.length - 1;
+
+          if (segBegin === segEnd) {
+            // 单 segment：保持原有逻辑
+            actualTi = b.segments[segBegin].ti;
+            adjStart = Math.max(0, adjStart - posAtStart);
+            adjEnd = Math.min(adjEnd - posAtStart, b.segments[segBegin].text.length);
+          } else {
+            // 跨 segment：收集所有 segment（处理时从右到左避免索引漂移）
+            selMulti = [];
+            for (var s = segBegin; s <= segEnd; s++) {
+              var segEntry = { ti: b.segments[s].ti, start: 0, end: b.segments[s].text.length, full: true };
+              if (s === segBegin) {
+                segEntry.start = Math.max(0, adjStart - posAtStart);
+                segEntry.full = (segEntry.start === 0);
+              }
+              selMulti.push(segEntry);
+            }
+            // 末位 segment 的处理
+            var lastOff = 0;
+            for (var s = 0; s < segEnd; s++) {
+              if (b.segments[s].type !== 'variable') lastOff += b.segments[s].text.length;
+            }
+            var endSegLen = b.segments[segEnd].text.length;
+            selMulti[selMulti.length - 1].end = Math.min(adjEnd - lastOff, endSegLen);
+            selMulti[selMulti.length - 1].full = (adjEnd === lastOff + endSegLen);
+            actualTi = selMulti[0].ti;
+          }
+        }
+
+        // 映射 cursorPos 到正确的 ti+pos（合并块中需要定位到具体 segment）
+        var cursorTi = b.ti;
+        if (b.segments) {
+          var segInfo = getCursorSegmentWithOffset(b, cursorPos);
+          cursorTi = segInfo.ti;
+          cursorPos = segInfo.pos;
+        }
+
+        // 用元素位置作为锚点
+        var r = el.getBoundingClientRect();
+        if (selMulti) {
+          showStyleMenu(r.left, r.bottom + 2, actualTi, undefined, undefined, selMulti, cursorTi, cursorPos);
+        } else if (adjStart >= 0 && adjEnd > adjStart) {
+          showStyleMenu(r.left, r.bottom + 2, actualTi, adjStart, adjEnd, null, cursorTi, cursorPos);
+        } else {
+          showStyleMenu(r.left, r.bottom + 2, actualTi, undefined, undefined, null, cursorTi, cursorPos);
+        }
+      });
+
+      // ── 行首退格 / 行中回车 ──
+      el.addEventListener('keydown', function(e) {
+        if (!widget) return;
+
+        if (e.key === 'Backspace') {
+          var sel = window.getSelection();
+          if (!sel.isCollapsed) return;
+
+          if (!isCursorAtLineStart(el, sel)) return;
+
+          var actualTi = b.ti;
+          // 合并块：光标在哪个 segment 的行首就合并该 segment
+          if (b.segments) {
+            var cursorPos = getCursorTextOffset(el);
+            var segInfo = getCursorSegmentWithOffset(b, cursorPos);
+            actualTi = segInfo.ti;
+          }
+          e.preventDefault();
+          _ignoreBlurEl = el;
+          if (actualTi > 0) {
+            var targetPrevTi = actualTi - 1;
+            var prevLen = 0;
+            for (var k = 0; k < blocks.length; k++) {
+              if (blocks[k].type === 'slot') continue;
+              if (blocks[k].segments) {
+                for (var s = 0; s < blocks[k].segments.length; s++) {
+                  var seg = blocks[k].segments[s];
+                  if (seg.type === 'variable') continue;
+                  if (seg.ti === targetPrevTi) {
+                    prevLen = seg.text.length;
+                    break;
+                  }
+                }
+              } else if (blocks[k].ti === targetPrevTi) {
+                prevLen = (blocks[k].text || '').length;
+                break;
+              }
+              if (prevLen > 0) break;
+            }
+            _pendingCursor = {ti: actualTi - 1, pos: prevLen};
+            widget.backspaceAtLineStart(actualTi);
+          }
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          _ignoreBlurEl = el;  // 标记：忽略后续同步 blur
+          var pos = getCursorTextOffset(el);
+          var actualTi = b.ti;
+          // 合并块：把光标偏移映射到正确的 segment
+          if (b.segments) {
+            var segInfo = getCursorSegmentWithOffset(b, pos);
+            if (widget) widget.logDebug(JSON.stringify({
+              op:'Enter', bti:b.ti, segs:b.segments.map(function(s){return s.text;}),
+              offset:pos, mapped:segInfo
+            }));
+            actualTi = segInfo.ti;
+            pos = segInfo.pos;
+          }
+          _pendingCursor = {ti: actualTi + 1, pos: 0};  // 先标记，因为 blocksChanged 同步触发 render()
+          widget.splitLineAt(actualTi, pos);
+        }
+      });
+
+      w.appendChild(el);
+      return w;
+    }
+
+    function renderChoice(b) {
+      var w = document.createElement('div');
+      w.style.cssText = 'margin:4px 0;padding:4px 8px 4px 4px;display:flex;align-items:center;gap:10px;min-height:26px;';
+      var dot = document.createElement('span');
+      dot.style.cssText = 'display:inline-block;width:6px;height:6px;border-radius:3px;background:#aac;margin-right:2px;';
+      w.appendChild(dot);
+      var label = document.createElement('span');
+      label.textContent = b.label;
+      label.style.cssText = 'color:#aac;font-size:12px;user-select:none;';
+      w.appendChild(label);
+      var del = document.createElement('button');
+      del.textContent = '\u00d7 \u5220\u9664';
+      del.style.cssText = 'margin-left:auto;background:#533;color:#d88;border:1px solid #644;border-radius:3px;padding:1px 10px;cursor:pointer;font-size:11px;';
+      del.addEventListener('click', function() { if (widget) widget.deleteChoice(); });
+      w.appendChild(del);
+      return w;
+    }
+
+    function renderSlot(b) {
+      var w = document.createElement('div');
+      w.className = 'b-slot';
+      if (b.controls && b.controls.length) {
+        var chips = document.createElement('div');
+        chips.className = 'b-slot-chips';
+        for (var i = 0; i < b.controls.length; i++) {
+          chips.appendChild(renderChip(b.si, b.controls[i]));
+        }
+        w.appendChild(chips);
+      }
+      var add = document.createElement('button');
+      add.className = 'b-slot-add';
+      add.textContent = '+';
+      add.addEventListener('click', function(e) { e.stopPropagation(); showChooser(b.si, e); });
+      w.appendChild(add);
+      setupDrop(w, b.si);
+      return w;
+    }
+
+    function renderChip(si, ctrl) {
+      var chip = document.createElement('span');
+      chip.className = 'b-chip';
+      chip.draggable = true;
+      chip.textContent = ctrl.label;
+      var x = document.createElement('span');
+      x.className = 'b-chip-x';
+      x.textContent = '\u00d7';
+      x.addEventListener('click', function(e) { e.stopPropagation(); if(widget) widget.deleteControl(si, ctrl.ci); });
+      chip.appendChild(x);
+      chip.addEventListener('dragstart', function(e) {
+        _isDragging = true;
+        e.dataTransfer.setData('text/x-ctrl', JSON.stringify({si:si, ci:ctrl.ci, kind:ctrl.kind}));
+        e.dataTransfer.effectAllowed = 'move';
+        chip.classList.add('dragging');
+      });
+      chip.addEventListener('dragend', function() { _isDragging = false; removeDragCaret(); chip.classList.remove('dragging'); clearDropHL(); clearDropTarget(); });
+      chip.addEventListener('dblclick', function(e) { e.stopPropagation(); if(widget) widget.editControl(si, ctrl.ci); });
+      return chip;
+    }
+
+    function setupDrop(el, si) {
+      el.addEventListener('dragover', function(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; el.classList.add('drop-hl'); });
+      el.addEventListener('dragleave', function() { el.classList.remove('drop-hl'); });
+      el.addEventListener('drop', function(e) {
+        e.preventDefault(); el.classList.remove('drop-hl');
+        try { var raw = e.dataTransfer.getData('text/x-ctrl'); if(raw&&widget){ var info=JSON.parse(raw);
+          if (info.inline) widget.moveInlineToSlot(info.ti, info.pos, si);
+          else widget.moveControl(info.si, info.ci, si);
+        } } catch(ex) {}
+      });
+    }
+    function clearDropHL() { var a=document.querySelectorAll('.drop-hl'); for(var i=0;i<a.length;i++) a[i].classList.remove('drop-hl'); }
+    function clearDropTarget() { var a=document.querySelectorAll('.drop-target'); for(var i=0;i<a.length;i++) a[i].classList.remove('drop-target'); }
+
+    // ═══════════════════════════════════════════════
+    // Control Chooser Popup (贴 + 按钮弹出)
+    // ═══════════════════════════════════════════════
+
+    var _slot = -1;
+    var CTRL_GROUPS = [
+      {label:'\u23f1 \u65f6\u95f4\u63a7\u5236', items:[
+        {k:'pause',label:'\u505c\u987f',desc:'\u63a7\u5236\u5bf9\u8bdd\u8282\u594f'},
+        {k:'auto_advance',label:'\u81ea\u52a8\u63a8\u8fdb',desc:'\u8df3\u8fc7\u7528\u6237\u8f93\u5165'},
+      ]},
+      {label:'\ud83d\udd0a \u58f0\u97f3', items:[
+        {k:'sound',label:'\u97f3\u6548 1',desc:'\u60c5\u7eea\u8bed\u97f3'},
+        {k:'sound2',label:'\u97f3\u6548 2',desc:'\u989d\u5916\u97f3\u6548'},
+      ]},
+      {label:'\ud83d\udddd \u56fe\u6807', items:[
+      ]},
+      {label:'\ud83c\udfad \u52a8\u753b', items:[
+        {k:'animation',label:'NPC \u52a8\u753b',desc:'\u89e6\u53d1\u89d2\u8272\u52a8\u4f5c'},
+      ]},
+      {label:'\u2699 \u9009\u9879', items:[
+        {k:'choice',label:'\u591a\u9009\u9879',desc:'\u73a9\u5bb6\u9009\u62e9\u5206\u652f'},
+        {k:'single_choice',label:'\u5355\u9009\u9879',desc:'\u8df3\u8fc7/\u786e\u8ba4\u63d0\u793a'},
+      ]},
+      {label:'\ud83d\udcdd \u6d88\u606f\u7ed3\u6784', items:[
+        {k:'raw',label:'\u5ef6\u7eed\u6d88\u606f',desc:'\u8fde\u63a5\u4e0b\u4e00\u6bb5\u5bf9\u8bdd'},
+      ]},
+    ];
+
+    function getPopup() {
+      var p = document.getElementById('ctrl-popup');
+      if (!p) {
+        p = document.createElement('div');
+        p.id = 'ctrl-popup';
+        p.innerHTML = '<div class="ctrl-popup-title">\u6dfb\u52a0 Control</div><div class="ctrl-popup-body"></div>';
+        document.body.appendChild(p);
+      }
+      return p;
+    }
+
+    function showChooser(si, e) {
+      hideStyleMenu();
+      _slot = si;
+      var popup = getPopup();
+      var body = popup.querySelector('.ctrl-popup-body');
+      body.innerHTML = '';
+      for (var g = 0; g < CTRL_GROUPS.length; g++) {
+        var grp = CTRL_GROUPS[g];
+        var wrap = document.createElement('div');
+        wrap.className = 'ch-group';
+        var lbl = document.createElement('div');
+        lbl.className = 'ch-group-label';
+        lbl.textContent = grp.label;
+        wrap.appendChild(lbl);
+        var btns = document.createElement('div');
+        btns.className = 'ch-group-btns';
+        for (var j = 0; j < grp.items.length; j++) {
+          var item = grp.items[j];
+          (function(k) {
+            var b = document.createElement('button');
+            b.innerHTML = '<b>' + item.label + '</b><span class="ch-desc">' + item.desc + '</span>';
+            b.addEventListener('click', function() { if(widget) widget.addControl(_slot, k); popup.style.display = 'none'; });
+            btns.appendChild(b);
+          })(item.k);
+        }
+        wrap.appendChild(btns);
+        body.appendChild(wrap);
+      }
+
+      var btnRect = e.target.getBoundingClientRect();
+      popup.style.display = 'block';
+      popup.style.left = btnRect.left + 'px';
+      popup.style.top = (btnRect.bottom + 4) + 'px';
+
+      // 同步 clamp
+      var ww = window.innerWidth, wh = window.innerHeight;
+      popup.style.left = '0px'; popup.style.top = '0px'; // 触发重排
+      var pw = popup.offsetWidth, ph = popup.offsetHeight;
+      var left = btnRect.left, top = btnRect.bottom + 4;
+      if (left + pw > ww - 8) left = Math.max(8, ww - pw - 8);
+      if (top + ph > wh - 8) top = Math.max(8, btnRect.top - ph - 4);
+      if (left < 8) left = 8;
+      popup.style.left = left + 'px';
+      popup.style.top = top + 'px';
+    }
+
+    // ═══════════════════════════════════════════════
+    // 右键样式菜单 (hover 二级)
+    // ═══════════════════════════════════════════════
+
+    var COLORS = [
+      {label:'红色', value:'red', color:'#ff4444'},
+      {label:'蓝色', value:'blue', color:'#4488ff'},
+      {label:'黄色', value:'yellow', color:'#ffee44'},
+      {label:'绿色', value:'green', color:'#44dd44'},
+      {label:'橙色', value:'orange', color:'#ff9922'},
+      {label:'灰色', value:'grey', color:'#999'},
+      {label:'浅绿', value:'light_green1', color:'#88ff88'},
+      {label:'浅灰', value:'light_grey', color:'#ccc'}
+    ];
+    var _styleTi = -1;
+    var _selStart = -1, _selEnd = -1;
+    var _selMulti = null;   // 跨 segment 选区 [{ti, start, end, full}, ...]
+    var _cursorTi = -1;
+    var _cursorPos = -1;
+
+    function getSelOffsets(editableEl) {
+      var sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return null;
+      var range = sel.getRangeAt(0);
+      if (!editableEl.contains(range.commonAncestorContainer)) return null;
+      var pre = document.createRange();
+      pre.selectNodeContents(editableEl);
+      pre.setEnd(range.startContainer, range.startOffset);
+      var start = pre.toString().length;
+      return {start: start, end: start + range.toString().length};
+    }
+
+    function isCursorAtLineStart(editableEl, sel) {
+      if (!sel.isCollapsed || sel.anchorOffset !== 0) return false;
+      var node = sel.anchorNode;
+      while (node && node !== editableEl) {
+        var prev = node.previousSibling;
+        while (prev) {
+          if (prev.nodeType === 3 && prev.textContent.trim()) return false;
+          if (prev.nodeType === 1 && prev.textContent.trim()) return false;
+          prev = prev.previousSibling;
+        }
+        node = node.parentNode;
+      }
+      return true;
+    }
+
+    function getCursorTextOffset(editableEl) {
+      var sel = window.getSelection();
+      if (!sel.rangeCount) return 0;
+      var range = sel.getRangeAt(0);
+      // 遍历所有文本节点，跳过 b-inline-var 内部的文字
+      var offset = 0, found = false;
+      var walker = document.createTreeWalker(editableEl, NodeFilter.SHOW_TEXT, null);
+      var tn;
+      while ((tn = walker.nextNode())) {
+        if (tn.parentElement && tn.parentElement.classList.contains('b-inline-var')) continue;
+        if (tn === range.startContainer) {
+          offset += range.startOffset;
+          found = true; break;
+        }
+        offset += tn.length;
+      }
+      return found ? offset : 0;
+    }
+
+    function getCursorSegment(b, el) {
+      // 返回光标所在 segment 的索引（0-based within b.segments）
+      var pos = getCursorTextOffset(el);
+      return getCursorSegmentWithOffset(b, pos).s;
+    }
+
+    function getCursorSegmentWithOffset(b, pos) {
+      // 返回 {s: segment索引, ti: 对应 lines 下标, pos: 相对该 segment 的偏移}
+      // 在 segment 边界上（pos == 累计长度）→ 归入下一个 text segment 的起始
+      var segPos = 0;
+      for (var s = 0; s < b.segments.length; s++) {
+        var seg = b.segments[s];
+        if (seg.type === 'variable') continue;
+        var segLen = seg.text.length;
+        var segEnd = segPos + segLen;
+        if (pos < segEnd) {
+          return {s: s, ti: seg.ti, pos: pos - segPos};
+        }
+        // 查找下一个 text segment
+        var nextTextS = -1;
+        for (var ns = s + 1; ns < b.segments.length; ns++) {
+          if (b.segments[ns].type !== 'variable') { nextTextS = ns; break; }
+        }
+        if (pos === segEnd && nextTextS >= 0) {
+          segPos = segEnd;
+          continue;
+        }
+        if (pos === segEnd) {
+          return {s: s, ti: seg.ti, pos: segLen};
+        }
+        segPos = segEnd;
+      }
+      return {s: 0, ti: b.segments[0].ti, pos: pos};
+    }
+
+    function showStyleMenu(x, y, ti, selStart, selEnd, selMulti, cursorTi, cursorPos) {
+      hidePopup();
+      hideStyleMenu();
+      _styleTi = ti;
+      _selStart = (selStart !== undefined) ? selStart : -1;
+      _selEnd = (selEnd !== undefined) ? selEnd : -1;
+      _selMulti = selMulti || null;
+      _cursorTi = (cursorTi !== undefined) ? cursorTi : ti;
+      _cursorPos = (cursorPos !== undefined) ? cursorPos : 0;
+
+      var menu = document.createElement('div');
+      menu.id = 'style-menu';
+
+      // ── 按钮图标（插入到光标位置）──
+      addMenuItem(menu, '\u6309\u94ae\u56fe\u6807').addEventListener('click', function() {
+        if (widget) widget.insertInlineAt(_cursorTi, _cursorPos, 'icon');
+        hideStyleMenu();
+      });
+      // ── 变量（插入到光标位置）──
+      addMenuItem(menu, '\u53d8\u91cf').addEventListener('click', function() {
+        if (widget) widget.insertInlineAt(_cursorTi, _cursorPos, 'variable');
+        hideStyleMenu();
+      });
+      addSepTo(menu);
+
+      // ── 颜色 ▶ ──
+      var colorItem = addMenuItem(menu, '\u989c\u8272 <span class="sm-arrow">\u25b6</span>');
+      var colorSub = makeSub(colorItem);
+      for (var i = 0; i < COLORS.length; i++) {
+        var c = COLORS[i];
+        addSubItem(colorSub, '<span class="sm-swatch" style="background:'+c.color+'"></span>'+c.label, (function(cv){ return function(){ addStyle('set_colour',{colour:cv}); }; })(c.value));
+      }
+      addSep(colorSub);
+      addSubItem(colorSub, '\u91cd\u7f6e\u989c\u8272', function() { addStyle('reset_colour',{}); });
+      setupSubHover(colorItem, colorSub);
+
+      // ── 字体 ▶ ──
+      var fontItem = addMenuItem(menu, '\u5b57\u4f53 <span class="sm-arrow">\u25b6</span>');
+      var fontSub = makeSub(fontItem);
+      addSubItem(fontSub, 'Normal', function() { addStyle('font',{font_kind:'normal'}); });
+      addSubItem(fontSub, '粗体', function() { addStyle('font',{font_kind:'hylian'}); });
+      setupSubHover(fontItem, fontSub);
+
+      // ── 字号 ▶ ──
+      var sizeItem = addMenuItem(menu, '\u5b57\u53f7 <span class="sm-arrow">\u25b6</span>');
+      var sizeSub = makeSub(sizeItem);
+      [80,100,125,150,200].forEach(function(s) {
+        addSubItem(sizeSub, s+'%', function() { addStyle('text_size',{percent:s}); });
+      });
+      setupSubHover(sizeItem, sizeSub);
+
+      document.body.appendChild(menu);
+      positionAndClamp(menu, x, y);
+    }
+
+    function makeSub(parent) {
+      var sub = document.createElement('div');
+      sub.className = 'sm-sub';
+      parent.appendChild(sub);
+      return sub;
+    }
+
+    function addMenuItem(menu, html) {
+      var item = document.createElement('div');
+      item.className = 'sm-item';
+      item.innerHTML = html;
+      menu.appendChild(item);
+      return item;
+    }
+
+    function addSubItem(sub, html, fn) {
+      var item = document.createElement('div');
+      item.className = 'sm-item';
+      item.innerHTML = html;
+      item.addEventListener('click', function() { fn(); hideStyleMenu(); });
+      sub.appendChild(item);
+    }
+
+    function addSep(sub) {
+      var sep = document.createElement('div');
+      sep.className = 'sm-sep';
+      sub.appendChild(sep);
+    }
+
+    function addSepTo(menu) {
+      var sep = document.createElement('div');
+      sep.className = 'sm-sep';
+      menu.appendChild(sep);
+    }
+
+    function setupSubHover(item, sub) {
+      var timer = null;
+      function show() { clearTimeout(timer); positionSub(sub, item); }
+      function scheduleHide() { timer = setTimeout(function() { sub.style.display = 'none'; }, 180); }
+      item.addEventListener('mouseenter', show);
+      item.addEventListener('mouseleave', scheduleHide);
+      sub.addEventListener('mouseenter', show);
+      sub.addEventListener('mouseleave', scheduleHide);
+    }
+
+    function positionSub(sub, parent) {
+      var pr = parent.getBoundingClientRect();
+      sub.style.display = 'block';
+      sub.offsetHeight; // 强制重排取真实尺寸
+      var sr = sub.getBoundingClientRect();
+      var ww = window.innerWidth, wh = window.innerHeight;
+      var left = pr.right;
+      var top = pr.top;
+      if (left + sr.width > ww - 4) left = pr.left - sr.width;
+      if (top + sr.height > wh - 4) top = wh - sr.height - 4;
+      if (top < 4) top = 4;
+      if (left < 4) left = 4;
+      sub.style.left = left + 'px';
+      sub.style.top = top + 'px';
+    }
+
+    function positionAndClamp(el, x, y) {
+      var w = el.offsetWidth, h = el.offsetHeight;
+      var ww = window.innerWidth, wh = window.innerHeight;
+      var left = x, top = y;
+      if (left + w > ww - 8) left = Math.max(8, ww - w - 8);
+      if (top + h > wh - 8) top = Math.max(8, wh - h - 8);
+      if (left < 8) left = 8;
+      if (top < 8) top = 8;
+      el.style.left = left + 'px';
+      el.style.top = top + 'px';
+    }
+
+    function addStyle(kind, params) {
+      if (!widget) return;
+      if (_selMulti && _selMulti.length >= 1) {
+        // 跨 segment：从右到左处理避免索引漂移
+        for (var i = _selMulti.length - 1; i >= 0; i--) {
+          var seg = _selMulti[i];
+          if (seg.full) {
+            widget.addParamControl(seg.ti, kind, JSON.stringify(params));
+          } else {
+            widget.splitLineForStyle(seg.ti, seg.start, seg.end, kind, JSON.stringify(params));
+          }
+        }
+        _selMulti = null;
+      } else if (_selStart >= 0 && _selEnd > _selStart) {
+        widget.splitLineForStyle(_styleTi, _selStart, _selEnd, kind, JSON.stringify(params));
+      } else {
+        widget.addParamControl(_styleTi, kind, JSON.stringify(params));
+      }
+      setTimeout(refreshDebug, 150);
+    }
+
+    function hideStyleMenu() {
+      var m = document.getElementById('style-menu');
+      if (m) m.remove();
+      _selMulti = null;
+    }
+
+    function hidePopup() {
+      var p = document.getElementById('ctrl-popup');
+      if (p) p.style.display = 'none';
+    }
+
+    // ═══════════════════════════════════════════════
+    // 全局事件
+    // ═══════════════════════════════════════════════
+
+    document.addEventListener('click', function(e) {
+      hideStyleMenu();
+      var popup = document.getElementById('ctrl-popup');
+      if (popup && popup.style.display !== 'none' && !popup.contains(e.target)) {
+        popup.style.display = 'none';
+      }
+    });
+
+    document.addEventListener('wheel', function(e) {
+      if (e.shiftKey) { e.preventDefault(); var z = parseFloat(document.documentElement.style.zoom)||1; z = e.deltaY<0 ? Math.min(3,z*1.1) : Math.max(0.5,z/1.1); document.documentElement.style.zoom = z; }
+    }, {passive:false});
+
+    document.addEventListener('DOMContentLoaded', function() {
+      initChannel();
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') { hideStyleMenu(); hidePopup(); }
+      });
+      // 空白处禁用 WebEngine 默认菜单
+      document.addEventListener('contextmenu', function(e) {
+        var el = e.target;
+        while (el) {
+          if (el.classList && el.classList.contains('b-text-inner')) return;
+          el = el.parentElement;
+        }
+        e.preventDefault();
+      });
+    });
+  </script>
+</body>
+</html>
