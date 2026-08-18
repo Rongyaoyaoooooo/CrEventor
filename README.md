@@ -4,7 +4,7 @@
   <img src="docs/logo.png" alt="CrEventor Logo" width="240">
 </p>
 
-> 塞尔达传说：旷野之息（The Legend of Zelda: Breath of the Wild）事件流（EventFlow）编辑器
+> 塞尔达传说：旷野之息（The Legend of Zelda: Breath of the Wild）Mod 制作综合事件流（EventFlow）开发工具
 
 **项目仓库**：https://github.com/Rongyaoyaoooooo/CrEventor
 

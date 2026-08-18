@@ -4,7 +4,7 @@
   <img src="docs/logo.png" alt="CrEventor Logo" width="240">
 </p>
 
-> An EventFlow editor for *The Legend of Zelda: Breath of the Wild*.
+> A comprehensive EventFlow development tool for *The Legend of Zelda: Breath of the Wild* modding.
 
 **Repository**: https://github.com/Rongyaoyaoooooo/CrEventor
 
