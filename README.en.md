@@ -55,7 +55,7 @@ Before using this tool, please read the [Zeldamods Wiki](https://zeldamods.org/)
 
 - **Copyright**: releases **do not bundle any in-game Chinese text** to avoid copyright issues.
 - **Not fully tested**: this tool has not been fully tested on large projects. Please back up manually and often. If you encounter any bug, please record and report it.
-- **Every save is a backup**: each save creates a backup and **never overwrites previous saves**. Locate backups by their save time; restore from the menu if needed.
+- **Every save is a backup**: each save creates a backup and **never overwrites previous saves**. Locate backups by their save time; restore from the menu if needed. When creating a manual backup, you can **set a custom name** to record and track project progress.
 
   ![Backup & restore](docs/backup.png)
 
