@@ -18,12 +18,32 @@ CrEventor is a deeply customized fork of [leoetlino/event-editor](https://github
 
 ---
 
+## About AI-Assisted Development
+
+The development of CrEventor has made extensive use of AI assistance, including code writing, feature implementation, and the AI EventFlow generation feature planned for future releases.
+
+I am not a professional programmer, so I will not hide the messiness and complexity in the code. CrEventor was not originally created to show off programming skills, nor to become the best editor out there. It came from a real need I encountered while making *Breath of the Wild* mods: I wanted a tool that brings EventFlow, text editing, GameData, SaveData, and EventInfo together, while minimizing repetitive work and the risk of data loss.
+
+So for this project, my first concern is whether the features work correctly, whether the actual workflow is convenient, and whether your data is safe. The project is still in development; code quality and program stability may be lacking, and I will not hide that. Actual bugs, error output, data anomalies, and technical suggestions that can improve the project are all welcome via Issues.
+
+However, if you are against using AI to write software, if you think AI-assisted projects are not worth using, or if you simply dislike CrEventor's design philosophy, then this project may not be for you.
+
+That is completely fine.
+
+The BotW mod community already has other excellent EventFlow and text editing tools. Please choose the tool you trust, like, and that fits your workflow.
+
+CrEventor does not try to replace them, and it does not require anyone to use it.
+
+I will keep deciding what CrEventor should become based on my own mod-making needs and development philosophy. I welcome questions and feedback from any creator who wants an easier way to start making mods.
+
+---
+
 ## Features
 
 - **Multi-flow tabbed workspace**: open multiple EventFlow files (`.bfevfl`) simultaneously, with close / rename / drag-to-reorder support.
 - **Lossless JSON round-trip serialization**: EventFlow can be converted to JSON and rebuilt back to binary (`.bfevfl`), ideal for version control and manual editing.
 - **Chinese localization (CNzh)**: built for Chinese story/dialogue authoring, with text extraction, editing, and independent overlay saving.
-  > Note: for copyright reasons, releases **do not bundle any in-game text**. Please provide your own text data extracted from the game (see Usage below).
+  > Note: for copyright reasons, releases **do not bundle any in-game text**. Please provide your own text data extracted from the game (see Tutorial below).
 - **Advanced text editing**: visual editing of MSBT `control` fields, covering `set_colour` / `font` / `text_size` / `sound` / `pause` / `choice` and over a dozen control types.
 
   ![Text editor](docs/text_editor.png)
@@ -165,50 +185,53 @@ pip install -r requirements.txt
 
 ---
 
-## Usage
+## Tutorial
 
-### 1. Prepare original text
+### What is CrEventor?
 
-Get the full original game text `texts.json` in the **BCML format** and place it in the corresponding platform directory under `CrEventor/resources/texts/` to load original text:
+CrEventor stands for "Creator's Event Editor", not a tech geek's toy. The original intent is to help creators with less experience realize their ideas.
 
-- Switch: `resources/texts/switch/`
-- WiiU: `resources/texts/wiiu/`
+### How do I get started?
 
-### 2. Extract text
+This tool aims to fully handle the complete workflow of event-based mods, so you can consider keeping all the event flows a mod needs in a single project. Before you start, first create or open a project (see the project folder convention in "Project Data Directory Convention" below).
 
-Run **Extract Text** from the Settings menu to automatically load the text of the original events used by this project.
+### How do I create an event flow?
 
-### 3. Platform note
+Create or open an event flow from the **File** menu, or import a JSON in the flowchart; structurally invalid JSON will be rejected.
 
-The **Platform** option in Settings **only affects the final mod structure in this version; it does not affect the actual content**.
+### How do I switch between multiple event flows?
 
-### 4. Basic workflow
+Loaded event flows appear on the left side of the screen; up to ten can be edited at the same time. Click to switch.
 
-1. **New / Open project**: create a project via the menu, or open an existing project directory.
-2. **Edit EventFlow**: add / remove / modify event nodes in the flowchart; edit event properties on the right.
-3. **Edit dialogue text**: select a Talk node on the left and edit dialogue content on the right (including advanced `control` field editing).
-4. **Configure dialogue options**: press `M` to open the option pool panel to configure buttons, cursor, and cancel items for GeneralChoice nodes; press `N` to open the game data panel.
-5. **Save**: `Ctrl+S` to save manually; the system auto-saves periodically; every save creates an independent backup and never overwrites history.
-6. **Package the mod**: follow Mod Packaging above to manually build sbeventpack → BNP, then place the `logs/` artifacts inside.
+### How do I edit text?
 
-### 5. Text editing
+Select a node containing a MessageId, right-click, and choose **Edit Text** to enter the text editor.
 
-- In the text editor, **right-click after selecting text** to set **font, size, and color**; note that **font cannot be combined with the other two (size, color)**.
-- **Right-click at the cursor** to add other `control` modules.
+You can right-click at the cursor to insert a control module, or select a piece of text and right-click to set its color, font, and size.
 
-### 6. Working with AI tools
+### How do I edit options?
 
-You can hand the exported JSON to an AI tool for processing and import it back into CrEventor; malformed JSON will be **rejected on import**.
+Select a GeneralChoice node and press `M` to open the option editor, which edits the option pool in this event flow's text and the option configuration for the upstream text of that GeneralChoice node.
 
-> AI assistance is **not included in this version**; it will be added in a later release, at which point users will need to provide legitimate game data.
+Select a node containing a MessageId and open the `M` menu to add a SingleChoice and configure it.
 
-### 7. Exported artifacts (logs)
+### How do I edit flags?
 
-After saving or exporting, you can find `eventinfo` / `gamedata` / `savedata` / `texts.json` artifacts in the project's `logs/` directory.
+Press `N` to open the left-side menu, where you can view all flags in this event flow except the vanilla flags. Set them from a template or manually.
 
-![Log artifacts](docs/logs.png)
+### How do I view event flow dependencies?
 
-### Project data directory convention
+Also in the `M` menu, the dependencies required by this event flow are shown, reminding you which dependency event flow files you need when packaging an sbeventpack.
+
+### How do I back up my project?
+
+You can save your project from the project menu and customize the save name; a new save does not overwrite the previous one. If something goes wrong, you can restore a backup from the project menu.
+
+### How do I import the text needed by vanilla event flows?
+
+This version does not yet support dumping from the original game. You need to provide a BCML-format `texts.json` and place it in the `resource` folder, making sure the texts naming matches the game text language in Settings. Then click **Extract Game Text** to import the vanilla text.
+
+### Project Data Directory Convention
 
 ```
 {project}/
