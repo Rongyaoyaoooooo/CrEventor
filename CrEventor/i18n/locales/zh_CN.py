@@ -6,7 +6,7 @@ STRINGS = {
         "title": "CrEventor",
         "title_with_flow": "{indicator}{name} - CrEventor",
         "about_title": "关于 CrEventor",
-        "about_text": "<h2>CrEventor</h2><p>基于 Event Editor 的《塞尔达传说：旷野之息》复合型开源事件流生成与编辑器</p><p>作者 绒瑶瑶瑶</p><p><small>版本 v1.0.0</small></p>",
+        "about_text": "<h2>CrEventor</h2><p>基于 Event Editor 的《塞尔达传说：旷野之息》复合型开源事件流生成与编辑器</p><p>作者 绒瑶瑶瑶</p><p><small>版本 v1.0.0</small></p><hr><p><small>基于 leoetlino/event-editor（GPL v2）二次开发。<br>本程序以 GNU GPL v2 或更高版本发布，不提供任何担保（NO WARRANTY）。</small></p>",
         "untitled": "未命名",
     },
 

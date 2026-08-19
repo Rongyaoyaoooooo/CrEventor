@@ -6,7 +6,7 @@ STRINGS = {
         "title": "CrEventor",
         "title_with_flow": "{indicator}{name} - CrEventor",
         "about_title": "About CrEventor",
-        "about_text": "<h2>CrEventor</h2><p>Composite open-source event flow generator &amp; editor for <i>The Legend of Zelda: Breath of the Wild</i>, based on Event Editor.</p><p>Author: Rongyaoyaoooooo&ensp;（绒瑶瑶瑶）</p><p><small>Version: v1.0.0</small></p>",
+        "about_text": "<h2>CrEventor</h2><p>Composite open-source event flow generator &amp; editor for <i>The Legend of Zelda: Breath of the Wild</i>, based on Event Editor.</p><p>Author: Rongyaoyaoooooo&ensp;（绒瑶瑶瑶）</p><p><small>Version: v1.0.0</small></p><hr><p><small>Based on leoetlino/event-editor (GPL v2).<br>Released under GNU GPL v2 or later, with NO WARRANTY.</small></p>",
         "untitled": "Untitled",
     },
 

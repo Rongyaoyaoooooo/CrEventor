@@ -239,6 +239,18 @@ pip install -r requirements.txt
 
 本项目所使用的第三方库及其许可证、致谢详见 [THIRD_PARTY_LICENSES.md](./THIRD_PARTY_LICENSES.md)。
 
+## 对上游源码的修改
+
+本项目对 [leoetlino/event-editor](https://github.com/leoetlino/event-editor) 上游源码进行了以下主要修改（均在 GPL v2+ 下发布）：
+
+- 中文本地化（zh_CN），默认界面语言为简体中文，支持运行时切换
+- 完整 JSON 往返序列化（`flow_serialize.py`）
+- 对话文本深度编辑集成（MessageId 关联、MSBT `control` 字段编辑、节点对话预览）
+- 多流程标签页工作区
+- 流程图注释显示（keys / actions / queries 中文对照）
+- 选项池（GeneralChoice）编辑器
+- PyInstaller frozen 打包路径适配
+
 ---
 
 ## 致谢

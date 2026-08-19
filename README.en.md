@@ -240,6 +240,18 @@ This project is derived from [leoetlino/event-editor](https://github.com/leoetli
 
 Third-party libraries and their licenses and acknowledgements are listed in [THIRD_PARTY_LICENSES.md](./THIRD_PARTY_LICENSES.md).
 
+## Modifications to Upstream
+
+The following key changes were made to the upstream [leoetlino/event-editor](https://github.com/leoetlino/event-editor) source (all released under GPL v2+):
+
+- Chinese localization (zh_CN) with Simplified Chinese as the default UI language, switchable at runtime
+- Full JSON round-trip serialization (`flow_serialize.py`)
+- Deep dialogue text editing integration (MessageId mapping, MSBT `control` field editing, node dialogue preview)
+- Multi-flow tab workspace
+- Flowchart notes display (Chinese glosses for keys / actions / queries)
+- Option pool (GeneralChoice) editor
+- PyInstaller frozen path adaptation
+
 ---
 
 ## Acknowledgements
